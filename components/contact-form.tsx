@@ -1,19 +1,25 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState, useTransition } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { sendMessage } from "@/app/actions/contact"
 
-const initialState = { ok: false, error: "" }
-
 export function ContactForm() {
-  const [state, formAction, pending] = useActionState(sendMessage as any, initialState as any)
+  const [isPending, startTransition] = useTransition()
+  const [state, setState] = useState<{ ok: boolean; error?: string }>({ ok: false })
+
+  async function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      const result = await sendMessage({ ok: false }, formData)
+      setState(result)
+    })
+  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form action={handleSubmit} className="flex flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="flex flex-col gap-2.5">
           <Label htmlFor="name" className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Nome</Label>
@@ -33,19 +39,19 @@ export function ContactForm() {
         <Textarea id="message" name="message" required rows={6} placeholder="Conte sobre o projeto, datas, cachê..." />
       </div>
       
-      {(state as any)?.error && (
+      {state?.error && (
         <p className="rounded-sm border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {(state as any).error}
+          {state.error}
         </p>
       )}
-      {(state as any)?.ok && (
+      {state?.ok && (
         <p className="rounded-sm border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">
           Mensagem enviada com sucesso! Retornaremos em breve.
         </p>
       )}
       
-      <Button type="submit" disabled={pending} className="mt-2 h-12 text-xs uppercase tracking-[0.2em]">
-        {pending ? "Enviando..." : "Enviar mensagem"}
+      <Button type="submit" disabled={isPending} className="mt-2 h-12 text-xs uppercase tracking-[0.2em]">
+        {isPending ? "Enviando..." : "Enviar mensagem"}
       </Button>
     </form>
   )
